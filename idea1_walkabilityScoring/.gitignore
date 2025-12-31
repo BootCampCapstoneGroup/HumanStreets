@@ -1,0 +1,34 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.env
+
+# --- Data & Large Files ---
+*.tif
+*.tiff
+*.jpg
+*.jpeg
+*.png
+*.npy
+datasets/
+SAM3/sam3.pt
+
+# --- Models ---
+*.pt
+*.pth
+*.onnx
+
+# --- IDE/Editor ---
+.vscode/
+.idea/
+
+# --- UV / Environment (Keep these!) ---
+!uv.lock
+!pyproject.toml
+!README.md
+
+# --- Logs & Results ---
+*.log
+*_result.jpg
