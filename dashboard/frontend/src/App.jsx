@@ -3,6 +3,7 @@ import './index.css'
 import ChatSidebar from './components/ChatSidebar'
 import MapContainer from './components/MapContainer'
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { API_BASE_URL } from './config';
 
 function App() {
   const [messages, setMessages] = useState([
@@ -18,7 +19,7 @@ function App() {
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        const res = await fetch('http://localhost:8000/health')
+        const res = await fetch(`${API_BASE_URL}/health`)
         setServerStatus(res.ok)
       } catch (e) {
         setServerStatus(false)
@@ -50,7 +51,7 @@ function App() {
         payload.longitude = selectedLocation.longitude
       }
 
-      const response = await fetch('http://localhost:8000/chat', {
+      const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -110,7 +111,7 @@ function App() {
         selectedLocation={selectedLocation}
         onClearLocation={() => setSelectedLocation(null)}
       />
-      <MapContainer 
+      <MapContainer
         selectedLocation={selectedLocation}
         onLocationSelect={setSelectedLocation}
       />
