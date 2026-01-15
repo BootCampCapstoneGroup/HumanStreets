@@ -12,6 +12,8 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [serverStatus, setServerStatus] = useState(false)
 
+  const [selectedLocation, setSelectedLocation] = useState(null)
+
   // Poll for server status
   useEffect(() => {
     const checkHealth = async () => {
@@ -42,10 +44,16 @@ function App() {
     const startTime = Date.now()
 
     try {
+      const payload = { message: currentInput }
+      if (selectedLocation) {
+        payload.latitude = selectedLocation.latitude
+        payload.longitude = selectedLocation.longitude
+      }
+
       const response = await fetch('http://localhost:8000/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: currentInput }),
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) throw new Error('Network response was not ok')
@@ -99,8 +107,13 @@ function App() {
         serverStatus={serverStatus}
         input={input}
         onInputChange={(e) => setInput(e.target.value)}
+        selectedLocation={selectedLocation}
+        onClearLocation={() => setSelectedLocation(null)}
       />
-      <MapContainer />
+      <MapContainer 
+        selectedLocation={selectedLocation}
+        onLocationSelect={setSelectedLocation}
+      />
     </div>
   )
 }

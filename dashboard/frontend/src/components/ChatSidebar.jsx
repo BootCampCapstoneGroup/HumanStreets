@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 
-function ChatSidebar({ messages, onSendMessage, loading, serverStatus, input, onInputChange }) {
+function ChatSidebar({ messages, onSendMessage, loading, serverStatus, input, onInputChange, selectedLocation, onClearLocation }) {
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
@@ -36,6 +36,13 @@ function ChatSidebar({ messages, onSendMessage, loading, serverStatus, input, on
                 ))}
                 <div ref={messagesEndRef} />
             </div>
+
+            {selectedLocation && (
+                <div style={{ padding: '8px 15px', background: '#e0f7fa', color: '#006064', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', borderTop: '1px solid #b2ebf2' }}>
+                    <span>📍 Pin Dropped: {selectedLocation.latitude.toFixed(4)}, {selectedLocation.longitude.toFixed(4)}</span>
+                    <button onClick={onClearLocation} style={{ background: 'transparent', border: 'none', color: '#006064', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
+                </div>
+            )}
 
             <form onSubmit={onSendMessage} className="chat-input-area">
                 <input
