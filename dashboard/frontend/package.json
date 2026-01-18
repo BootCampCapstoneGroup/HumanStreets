@@ -10,11 +10,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@nebula.gl/edit-modes": "^1.0.4",
+    "@nebula.gl/layers": "^1.0.4",
     "deck.gl": "^8.9.35",
+    "lucide-react": "^0.562.0",
     "maplibre-gl": "^5.15.0",
+    "plotly.js": "^3.3.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-map-gl": "^8.1.0"
+    "react-map-gl": "^8.1.0",
+    "react-markdown": "^10.1.0",
+    "react-plotly.js": "^2.6.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

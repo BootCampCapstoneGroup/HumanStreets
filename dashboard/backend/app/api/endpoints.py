@@ -14,6 +14,7 @@ class ChatRequest(BaseModel):
     latitude: float = Field(None, description="User latitude")
     longitude: float = Field(None, description="User longitude")
     model_provider: str = Field("local", description="Model provider: 'local', 'gemini', 'openrouter_free' or 'deepseek_free'")
+    history: list[dict] = Field(default=[], description="Chat history for context")
 
 @router.post("/chat")
 async def chat(request: ChatRequest):
@@ -25,7 +26,12 @@ async def chat(request: ChatRequest):
     
     try:
         return StreamingResponse(
-            router_agent.route_and_execute(user_msg, context={"location": loc_context}, provider=request.model_provider),
+            router_agent.route_and_execute(
+                user_msg, 
+                history=request.history,
+                context={"location": loc_context}, 
+                provider=request.model_provider
+            ),
             media_type="text/event-stream"
         )
     except Exception as e:
@@ -52,3 +58,11 @@ async def get_h3_layer():
     except Exception as e:
         print(f"Error loading H3 data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/api/layers/query_result")
+async def get_query_result_layer():
+    """Returns the result of the last SQL query executed by the agent."""
+    data = spatial_service.get_query_result()
+    if not data:
+        return {"type": "FeatureCollection", "features": []}
+    return data

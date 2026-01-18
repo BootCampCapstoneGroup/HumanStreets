@@ -7,6 +7,8 @@ from app.core.config import settings
 class SpatialService:
     def __init__(self):
         self.h3_data = None
+        self.last_query_result = None
+        self.available_layers = ["NEIGHBORHOODS", "WALKABILITY"]
         
     def load_data(self):
         """Loads H3 data into memory for RAG context."""
@@ -52,5 +54,11 @@ class SpatialService:
         
         df = pd.read_parquet(settings.H3_DATA_PATH)
         return df.to_dict(orient='records')
+
+    def set_query_result(self, geojson_data):
+        self.last_query_result = geojson_data
+        
+    def get_query_result(self):
+        return self.last_query_result
 
 spatial_service = SpatialService()

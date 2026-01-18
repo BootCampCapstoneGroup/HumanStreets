@@ -5,8 +5,9 @@ torch
 accelerate
 psycopg2-binary
 peft
-google-generativeai
+
 python-dotenv
 openai
 google-genai 
 python-dotenv
+h3

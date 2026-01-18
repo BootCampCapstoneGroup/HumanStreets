@@ -2,7 +2,7 @@ import asyncio
 import os
 import time
 from threading import Thread
-import google.generativeai as genai
+from google import genai
 from openai import OpenAI
 from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
 from peft import PeftModel
@@ -12,6 +12,7 @@ class LLMService:
     def __init__(self):
         self.model = None
         self.tokenizer = None
+        self.gemini_client = None
         
     def initialize_models(self):
         """Initializes Gemini and Local Model."""
@@ -29,8 +30,11 @@ class LLMService:
 
         # Setup Gemini
         if settings.GEMINI_API_KEY:
-            genai.configure(api_key=settings.GEMINI_API_KEY)
-            print("Gemini Configured.")
+            try:
+                self.gemini_client = genai.Client(api_key=settings.GEMINI_API_KEY)
+                print("Gemini Client Configured.")
+            except Exception as e:
+                print(f"Error configuring Gemini Client: {e}")
         else:
             print("Warning: GEMINI_API_KEY not found")
 
@@ -41,8 +45,9 @@ class LLMService:
                 settings.MODEL_ID,
                 device_map="auto",
                 dtype="bfloat16",
+                trust_remote_code=True,
             )
-            self.tokenizer = AutoTokenizer.from_pretrained(settings.MODEL_ID)
+            self.tokenizer = AutoTokenizer.from_pretrained(settings.MODEL_ID, trust_remote_code=True)
             
             print(f"Loading LoRA Adapter from: {settings.ADAPTER_PATH}")
             self.model = PeftModel.from_pretrained(base_model, settings.ADAPTER_PATH)
@@ -116,12 +121,10 @@ class LLMService:
                 yield f"Provider Error: {err_msg}"
 
     async def _stream_gemini(self, messages: list[dict[str, str]]):
-        if not settings.GEMINI_API_KEY:
-            yield "Stack Error: Gemini API Key not configured."
-            return
+        if not self.gemini_client:
+             yield "Stack Error: Gemini Client not initialized."
+             return
 
-        gemini_model = genai.GenerativeModel("gemini-2.0-flash")
-        
         # Convert messages to Gemini format (simple text for now)
         full_prompt = ""
         for msg in messages:
@@ -130,7 +133,11 @@ class LLMService:
             full_prompt += f"{role}: {content}\n"
 
         try:
-            response = gemini_model.generate_content(full_prompt, stream=True)
+            # streaming with google-genai SDK
+            response = self.gemini_client.models.generate_content_stream(
+                model="gemini-2.5-flash",
+                contents=full_prompt
+            )
             for chunk in response:
                 if chunk.text:
                     yield chunk.text
@@ -140,7 +147,14 @@ class LLMService:
 
     async def _stream_local(self, messages: list[dict[str, str]]):
         if self.model is None or self.tokenizer is None:
-            yield "Stack Error: Local model not loaded."
+            # Fallback to Gemini or OpenRouter
+            print("⚠️ Local model not loaded. Falling back to Gemini/OpenRouter.")
+            if self.gemini_client:
+                async for chunk in self._stream_gemini(messages):
+                     yield chunk
+            else:
+                async for chunk in self._stream_openrouter(messages, model="google/gemini-2.0-flash-lite-preview-02-05:free"):
+                     yield chunk
             return
 
         input_ids = self.tokenizer.apply_chat_template(

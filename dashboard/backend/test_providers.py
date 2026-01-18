@@ -1,5 +1,5 @@
 import os
-import google.generativeai as genai
+
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -15,12 +15,12 @@ print(f"OpenRouter Key Present: {bool(OPENROUTER_KEY)}")
 print("-" * 50)
 
 # 2. Test Gemini
-print("\nTesting Google Gemini (gemini-2.0-flash)...")
+print("\nTesting Google Gemini (gemini-2.5-flash)...")
 if GEMINI_KEY:
     try:
-        genai.configure(api_key=GEMINI_KEY)
-        model = genai.GenerativeModel("gemini-2.0-flash")
-        resp = model.generate_content("Hi")
+        from google import genai
+        client = genai.Client(api_key=GEMINI_KEY)
+        resp = client.models.generate_content(model="gemini-2.5-flash", contents="Hi")
         print(f"✅ Gemini Success: {resp.text.strip()[:50]}...")
     except Exception as e:
         print(f"❌ Gemini Failed: {e}")
