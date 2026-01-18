@@ -10,9 +10,10 @@ class Config:
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
     DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:12345@localhost:5432/capstone")
     
-    BASE_DIR = r"v:\MICS\Projects___IN_PROGRESS\DevPorj\BootCamp_Capstone_Project\idea1_walkabilityScoring\cloned\HumanStreets"
+    # Dynamic Base Dir (points to HumanStreets root)
+    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../.."))
     H3_DATA_PATH = os.path.join(BASE_DIR, "data", "riyadh_h3_r9.parquet")
-    NEIGHBORHOODS_PATH = os.path.join(BASE_DIR, "data", "riyadh_neighborhoods.geojson")
+    NEIGHBORHOODS_PATH = os.path.join(BASE_DIR, "webapp_capstone", "frontend", "src", "data", "riyadh_neighborhoods.geojson")
     
     MODEL_ID = "LiquidAI/LFM2-1.2B"
     ADAPTER_PATH = os.path.join(BASE_DIR, "dashboard", "backend", "checkpoint-226")
