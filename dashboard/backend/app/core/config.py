@@ -13,7 +13,7 @@ class Config:
     # Dynamic Base Dir (points to HumanStreets root)
     BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../.."))
     H3_DATA_PATH = os.path.join(BASE_DIR, "data", "riyadh_h3_r9.parquet")
-    NEIGHBORHOODS_PATH = os.path.join(BASE_DIR, "webapp_capstone", "frontend", "src", "data", "riyadh_neighborhoods.geojson")
+    NEIGHBORHOODS_PATH = os.path.join(BASE_DIR, "data", "riyadh_neighborhoods.geojson")
     
     MODEL_ID = "LiquidAI/LFM2-1.2B"
     ADAPTER_PATH = os.path.join(BASE_DIR, "dashboard", "backend", "checkpoint-226")

@@ -135,7 +135,8 @@ class RouterAgent:
         else:
             # GENERAL
             system_prompt = (
-                "You are a helpful assistant for the HumanStreets Walkability Dashboard.\n"
+                "You are a helpful assistant for the HumanStreets Walkability Dashboard for **Riyadh, Saudi Arabia**.\n"
+                "**IMPORTANT**: This project is exclusively for Riyadh. Do NOT mention St. Louis or any other city unless explicitly asked.\n"
                 "**FORMATTING RULES:**\n"
                 "- use **Markdown** for all responses.\n"
                 "- Use **bold** for key terms and layer names.\n"

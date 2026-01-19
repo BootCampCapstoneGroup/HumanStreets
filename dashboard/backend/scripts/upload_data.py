@@ -1,20 +1,27 @@
 
 import os
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 import geopandas as gpd
 
 # Configuration
 DB_URL = "postgresql://postgres:12345@localhost:5432/capstone"
 
-DATA_DIR = r"v:\MICS\Projects___IN_PROGRESS\DevPorj\BootCamp_Capstone_Project\idea1_walkabilityScoring\cloned\HumanStreets\data"
+# Dynamic Base Dir (works for both Local Windows and Remote Linux if structure is preserved)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "../../data")
+
 PARQUET_FILE = os.path.join(DATA_DIR, "riyadh_h3_r9.parquet")
 NEIGHBORHOODS_FILE = os.path.join(DATA_DIR, "riyadh_neighborhoods.geojson")
 STREETS_FILE = os.path.join(DATA_DIR, "streets.geojson")
 SEGMENTS_GPKG = os.path.join(DATA_DIR, "sam3_results_50_overalping.gpkg")
 
 def get_engine():
-    return create_engine(DB_URL)
+    engine = create_engine(DB_URL)
+    with engine.connect() as conn:
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))
+        conn.commit()
+    return engine
 
 def upload_file(path, table_name, engine):
     if not os.path.exists(path):

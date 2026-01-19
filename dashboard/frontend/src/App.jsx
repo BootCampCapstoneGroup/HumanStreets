@@ -16,7 +16,7 @@ function App() {
   const [serverStatus, setServerStatus] = useState(false)
 
   // Theme State
-  const [theme, setTheme] = useState('light')
+  const [theme, setTheme] = useState('dust')
 
   // Apply Theme
   useEffect(() => {

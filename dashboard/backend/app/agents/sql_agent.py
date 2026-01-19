@@ -150,15 +150,34 @@ class SQLAgent:
                     if not rows:
                         yield "Query returned no results."
                     else:
-                        # Convert results to a simple string format for the LLM
-                        data_str = str([dict(zip(keys, row)) for row in rows])
+                        # Convert results to a format optimized for small LLMs
+                        data_list = [dict(zip(keys, row)) for row in rows]
                         
-                        prompt = (
-                            f"User Request: {query}\n"
-                            f"Data: {data_str}\n\n"
-                            "Answer the request using the Data. Be concise."
-                        )
-                        
+                        # Optimization: Flatten complex JSON for simple aggregations
+                        if len(data_list) == 1 and len(data_list[0]) == 1:
+                            # Single value (e.g., {'count': 113})
+                            key, val = list(data_list[0].items())[0]
+                            
+                            # Use LLM to rephrase naturally, but FORCE the value
+                            data_str = str(val)
+                            print(f"[DEBUG SQL AGENT] Single Value Optimization: {val}")
+                            
+                            prompt = (
+                                f"User Question: {query}\n"
+                                f"Database Result: {val}\n\n"
+                                f"Answer the user's question using the Database Result exactly. "
+                                f"Do not calculate anything. Just put the number {val} into a nice sentence."
+                            )
+                        else:
+                            # Standard format for multi-row results
+                            data_str = str(data_list)
+                            
+                            prompt = (
+                                f"User Request: {query}\n"
+                                f"Data: {data_str}\n\n"
+                                "Answer the request using the Data. The Data is the ground truth. Do not hallucinate."
+                            )
+                            
                         yield "[[DEBUG: Generating Natural Language Response...]]\n"
                         messages = [{"role": "user", "content": prompt}]
                         async for chunk in llm_service.generate_response(messages, provider=provider):

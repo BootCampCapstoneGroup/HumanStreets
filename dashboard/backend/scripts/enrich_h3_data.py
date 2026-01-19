@@ -56,12 +56,34 @@ def main():
     h3_enriched = h3_enriched.drop_duplicates(subset='h3_index', keep='first')
     
     print(f"Enriched data: {len(h3_enriched)} rows.")
-    print(f"Sample: {h3_enriched[['h3_index', 'neighborhood_name_en', 'avg_street_score']].head()}")
     
     print("Uploading enriched h3_grid to PostGIS (replacing old table)...")
     h3_enriched.to_postgis('h3_grid', engine, if_exists='replace', index=False)
     
-    print("✅ Enrichment complete!")
+    # --- NEW: Aggregate Scores to Neighborhoods ---
+    print("Aggregating scores to neighborhoods...")
+    # Group by name and calculate mean score
+    neighborhood_scores = h3_enriched.groupby('neighborhood_name_en')['avg_street_score'].mean().reset_index()
+    print(f"Calculated scores for {len(neighborhood_scores)} neighborhoods.")
+    
+    # Update neighborhoods table
+    print("Updating 'avg_walkability' in neighborhoods table...")
+    with engine.connect() as conn:
+        # Ensure column exists
+        conn.execute(text("ALTER TABLE neighborhoods ADD COLUMN IF NOT EXISTS avg_walkability FLOAT"))
+        
+        # Batch update is efficient enough for ~126 neighborhoods
+        for index, row in neighborhood_scores.iterrows():
+            name = row['neighborhood_name_en']
+            score = row['avg_street_score']
+            
+            # Use parametrized query to handle special characters safely
+            query = text("UPDATE neighborhoods SET avg_walkability = :score WHERE name = :name")
+            result = conn.execute(query, {"score": score, "name": name})
+            
+        conn.commit()
+            
+    print("✅ Enrichment and Neighborhood Update complete!")
 
 if __name__ == "__main__":
     main()

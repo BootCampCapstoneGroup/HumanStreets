@@ -64,6 +64,75 @@
   --sidebar-msg-user-text: #ffffff;
 }
 
+[data-theme='capstone'] {
+  /* ========================================= */
+  /* THEME: CAPSTONE (Ebony & Dust Grey) */
+  /* ========================================= */
+
+  /* Global / Map Variables */
+  --bg-primary: var(--dust-grey-50);
+  --tool-bg: var(--dust-grey-100);
+  --tool-text: var(--ebony-950);
+  --tool-hover: var(--dust-grey-200);
+  --border-color: var(--dust-grey-300);
+  --text-secondary: var(--dust-grey-600);
+
+  /* Sidebar Variables */
+  --sidebar-bg: var(--dust-grey-50);
+  /* Light Dust Gray Background */
+  --sidebar-bg-secondary: var(--dust-grey-100);
+  --sidebar-text-primary: var(--ebony-950);
+  --sidebar-text-secondary: var(--ebony-600);
+  --sidebar-border: var(--dust-grey-300);
+  --sidebar-input-bg: #ffffff;
+  /* Cleaner white input */
+
+  /* Message Bubbles */
+  --sidebar-msg-assistant: var(--ebony-100);
+  /* Light Ebony for Assistant */
+  --sidebar-msg-user: var(--ebony-600);
+  /* Strong Ebony for User */
+  --sidebar-msg-user-text: #ffffff;
+
+  /* Accents */
+  --accent-color: var(--ebony-500);
+  --accent-hover: var(--ebony-600);
+}
+
+[data-theme='dust'] {
+  /* ========================================= */
+  /* THEME: DUST (Custom #D9D6D1 & Ebony) */
+  /* ========================================= */
+
+  /* Global / Map Variables */
+  --bg-primary: #D9D6D1;
+  --tool-bg: #E8E6E3;
+  /* Slightly lighter for contrast */
+  --tool-text: var(--ebony-950);
+  --tool-hover: #C5C2BD;
+  --border-color: #B0ADA8;
+  --text-secondary: var(--ebony-700);
+
+  /* Sidebar Variables */
+  --sidebar-bg: #D9D6D1;
+  /* User Requested Background */
+  --sidebar-bg-secondary: #CEC9C4;
+  /* Slightly darker/different for header */
+  --sidebar-text-primary: var(--ebony-950);
+  --sidebar-text-secondary: var(--ebony-700);
+  --sidebar-border: #B0ADA8;
+  --sidebar-input-bg: #ffffff;
+
+  /* Message Bubbles (Ebony as requested) */
+  --sidebar-msg-assistant: var(--ebony-100);
+  --sidebar-msg-user: var(--ebony-600);
+  --sidebar-msg-user-text: #ffffff;
+
+  /* Accents */
+  --accent-color: var(--ebony-600);
+  --accent-hover: var(--ebony-700);
+}
+
 body,
 #root,
 .app-container {
