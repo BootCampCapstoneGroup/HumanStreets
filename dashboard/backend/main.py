@@ -6,6 +6,7 @@ from app.services.spatial import spatial_service
 from app.api.endpoints import router
 import uvicorn
 import logging
+import sys
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -32,13 +33,21 @@ app.add_middleware(
 app.include_router(router)
 
 
-# Custom Log Filter to suppress /health checks
-class HealthCheckFilter(logging.Filter):
+# Custom Log Filter to suppress /health checks and stack them
+class StackedHealthCheckFilter(logging.Filter):
+    _health_count = 0
+
     def filter(self, record):
-        return hasattr(record, "args") and len(record.args) >= 3 and record.args[2] != "/health"
+        if hasattr(record, "args") and len(record.args) >= 3 and record.args[2] == "/health":
+            StackedHealthCheckFilter._health_count += 1
+            # Stack the log in place using carriage return
+            sys.stderr.write(f"\rHealth Check Status: OK (x{StackedHealthCheckFilter._health_count})")
+            sys.stderr.flush()
+            return False
+        return True
 
 # Configure Logging Globally
-logging.getLogger("uvicorn.access").addFilter(HealthCheckFilter())
+logging.getLogger("uvicorn.access").addFilter(StackedHealthCheckFilter())
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

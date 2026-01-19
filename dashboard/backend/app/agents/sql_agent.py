@@ -56,20 +56,16 @@ class SQLAgent:
         valid_names_str = ", ".join(valid_names)
         
         system_prompt = (
-            "You are a PostGIS SQL Expert. Your role is to convert user questions into SQL queries.\n"
+            "You are a PostGIS SQL Expert. Convert user questions into SQL.\n"
             "**Database Schema:**\n"
             f"{schema}\n"
             "**Rules:**\n"
-            "1. Output ONLY the SQL query inside a markdown code block ```sql ... ```.\n"
-            "2. For neighborhood lookups, use the EXACT template from schema - DO NOT add JOINs!\n"
-            "3. **CRITICAL**: Include `geometry AS geom` for map display.\n"
-            "4. Use ILIKE for Arabic name matching. STRIP 'حي' FROM SEARCH TERM! \n"
-            "5. **NAMING & SPELLING (CRITICAL)**: \n"
-            "   Below is the List of Valid Neighborhood Names:\n"
+            "1. Output ONLY the SQL query inside ```sql ... ```.\n"
+            "2. Table: `neighborhoods` has `geometry` and `avg_walkability`.\n"
+            "3. Select `geometry AS geom` for maps.\n"
+            "4. Search names with ILIKE and wildcards (e.g. '%Name%').\n"
+            "5. Use these Exact Arabic Names:\n"
             f"   [{valid_names_str}]\n"
-            "   **INSTRUCTION**: If the user asks for a neighborhood (e.g. 'Malaz'), you MUST pick the closest matching name from the list above (e.g. 'الملز').\n"
-            "   **DO NOT TRANSLITERATE MANUALLY**. Use the exact string from the list.\n"
-            "6. Keep queries SIMPLE.\n"
         )
         
         # 1. Debug: Thinking
@@ -154,12 +150,19 @@ class SQLAgent:
                     if not rows:
                         yield "Query returned no results."
                     else:
-                        header = "| " + " | ".join(keys) + " |"
-                        separator = "| " + " | ".join(["---"] * len(keys)) + " |"
-                        table_rows = []
-                        for row in rows:
-                            table_rows.append("| " + " | ".join([str(x) for x in row]) + " |")
-                        yield f"**Results:**\n{header}\n{separator}\n" + "\n".join(table_rows)
+                        # Convert results to a simple string format for the LLM
+                        data_str = str([dict(zip(keys, row)) for row in rows])
+                        
+                        prompt = (
+                            f"User Request: {query}\n"
+                            f"Data: {data_str}\n\n"
+                            "Answer the request using the Data. Be concise."
+                        )
+                        
+                        yield "[[DEBUG: Generating Natural Language Response...]]\n"
+                        messages = [{"role": "user", "content": prompt}]
+                        async for chunk in llm_service.generate_response(messages, provider=provider):
+                            yield chunk
 
         except Exception as e:
             yield f"[[DEBUG: ❌ SQL Execution Error: {e}]]"

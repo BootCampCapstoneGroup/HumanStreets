@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import './colors.css'
 import './index.css'
 import ChatSidebar from './components/ChatSidebar'
 import MapContainer from './components/MapContainer'
@@ -8,7 +9,7 @@ import { API_BASE_URL } from './config';
 
 function App() {
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: '# 👋 Welcome to HumanStreets AI\n\n**What I can do:**\n- Analyze Riyadh\'s walkability\n- Search for neighborhoods\n- Visualize data on the map\n- Generate Pie & Bar charts\n\n**Try asking:**\n- `Show me Al-Nathim`\n- `Show Al-Narjis and Al-Malqa`\n\n**What to expect:**\nI will query the database, show polygons on the map, and zoom to the results!', timeTaken: null }
+    { role: 'assistant', content: '# Welcome to HumanStreets AI\n\n**What I can do:**\n- Analyze Riyadh\'s walkability\n- Search for neighborhoods\n- Visualize data on the map\n- Generate Pie & Bar charts\n\n**Try asking:**\n- `Show me Al-Nathim`\n- `Show Al-Narjis and Al-Malqa`\n\n**What to expect:**\nI will query the database, show polygons on the map, and zoom to the results!', timeTaken: null }
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
