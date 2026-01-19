@@ -49,9 +49,14 @@ class LLMService:
             )
             self.tokenizer = AutoTokenizer.from_pretrained(settings.MODEL_ID, trust_remote_code=True)
             
-            print(f"Loading LoRA Adapter from: {settings.ADAPTER_PATH}")
-            self.model = PeftModel.from_pretrained(base_model, settings.ADAPTER_PATH)
-            print("Model & Adapter loaded successfully.")
+            try:
+                print(f"Loading LoRA Adapter from: {settings.ADAPTER_PATH}")
+                self.model = PeftModel.from_pretrained(base_model, settings.ADAPTER_PATH)
+                print("Model & Adapter loaded successfully.")
+            except Exception as e:
+                print(f"⚠️ Warning: Failed to load LoRA adapter: {e}")
+                print("Falling back to Base Model only.")
+                self.model = base_model
         except Exception as e:
             print(f"Error loading local model: {e}")
 
