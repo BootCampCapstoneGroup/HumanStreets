@@ -1,15 +1,15 @@
-"""
-Enrich h3_grid table with:
-1. geometry column (Polygon from H3 index)
-2. neighborhood_name_en (via spatial join)
-"""
-import h3
-from shapely.geometry import Polygon
-import geopandas as gpd
-import pandas as pd
-from sqlalchemy import create_engine, text
+import sys
+import os
 
-DB_URL = "postgresql://postgres:12345@localhost:5432/capstone"
+# Add parent directory to path to import app.core.config
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from app.core.config import settings
+from sqlalchemy import create_engine, text
+import pandas as pd
+import geopandas as gpd
+from shapely.geometry import Polygon
+import h3
 
 def h3_to_polygon(h3_index):
     """Convert H3 index to Shapely Polygon."""
@@ -19,24 +19,26 @@ def h3_to_polygon(h3_index):
         coords = [(lng, lat) for lat, lng in boundary]
         return Polygon(coords)
     except Exception as e:
-        print(f"Error converting {h3_index}: {e}")
+        # print(f"Error converting {h3_index}: {e}")
         return None
 
 def main():
-    engine = create_engine(DB_URL)
+    print(f"Connecting to DB: {settings.DATABASE_URL}")
+    engine = create_engine(settings.DATABASE_URL)
     
     print("Loading h3_grid from database...")
-    h3_df = pd.read_sql("SELECT * FROM h3_grid", engine)
-    print(f"Loaded {len(h3_df)} rows.")
-    
+    try:
+        h3_df = pd.read_sql("SELECT * FROM h3_grid", engine)
+        print(f"Loaded {len(h3_df)} rows.")
+    except Exception as e:
+        print(f"Error loading h3_grid: {e}")
+        return
+
     print("Converting H3 indexes to geometry...")
     h3_df['geometry'] = h3_df['h3_index'].apply(h3_to_polygon)
-    
-    # Filter out any failed conversions
     h3_df = h3_df[h3_df['geometry'].notna()]
     print(f"Converted {len(h3_df)} rows successfully.")
     
-    # Create GeoDataFrame
     h3_gdf = gpd.GeoDataFrame(h3_df, geometry='geometry', crs="EPSG:4326")
     
     print("Loading neighborhoods from database...")
@@ -44,44 +46,63 @@ def main():
     print(f"Loaded {len(neighborhoods_gdf)} neighborhoods.")
     
     print("Performing spatial join...")
-    # sjoin assigns neighborhood 'name' to each H3 cell based on intersection
     h3_enriched = gpd.sjoin(h3_gdf, neighborhoods_gdf, how='left', predicate='intersects')
     
-    # Rename 'name' to 'neighborhood_name_en' and drop 'index_right' if exists
+    # Use 'name' from neighborhoods as the grouping key
     if 'name' in h3_enriched.columns:
-        h3_enriched['neighborhood_name_en'] = h3_enriched['name']
-        h3_enriched = h3_enriched.drop(columns=['name', 'index_right'], errors='ignore')
-    
-    # Drop duplicates (H3 cell may intersect multiple neighborhoods, keep first)
-    h3_enriched = h3_enriched.drop_duplicates(subset='h3_index', keep='first')
+        h3_enriched['neighborhood_name'] = h3_enriched['name']
     
     print(f"Enriched data: {len(h3_enriched)} rows.")
     
-    print("Uploading enriched h3_grid to PostGIS (replacing old table)...")
-    h3_enriched.to_postgis('h3_grid', engine, if_exists='replace', index=False)
-    
-    # --- NEW: Aggregate Scores to Neighborhoods ---
+    # Check what score column we have
+    score_col = 'avg_street_score'
+    if score_col not in h3_enriched.columns:
+        print(f"Warning: '{score_col}' not found. Available: {h3_enriched.columns}")
+        # Try finding a likely candidate
+        candidates = [c for c in h3_enriched.columns if 'score' in c]
+        if candidates:
+            score_col = candidates[0]
+            print(f"Using '{score_col}' instead.")
+        else:
+            print("No score column found! Aborting.")
+            return
+
     print("Aggregating scores to neighborhoods...")
-    # Group by name and calculate mean score
-    neighborhood_scores = h3_enriched.groupby('neighborhood_name_en')['avg_street_score'].mean().reset_index()
+    neighborhood_scores = h3_enriched.groupby('neighborhood_name')[score_col].mean().reset_index()
     print(f"Calculated scores for {len(neighborhood_scores)} neighborhoods.")
     
-    # Update neighborhoods table
     print("Updating 'avg_walkability' in neighborhoods table...")
     with engine.connect() as conn:
-        # Ensure column exists
         conn.execute(text("ALTER TABLE neighborhoods ADD COLUMN IF NOT EXISTS avg_walkability FLOAT"))
         
-        # Batch update is efficient enough for ~126 neighborhoods
+        # Reset all to NULL first to be sure
+        conn.execute(text("UPDATE neighborhoods SET avg_walkability = NULL"))
+        
+        # Batch update
+        updated_count = 0
         for index, row in neighborhood_scores.iterrows():
-            name = row['neighborhood_name_en']
-            score = row['avg_street_score']
+            name = row['neighborhood_name']
+            score = row[score_col]
             
-            # Use parametrized query to handle special characters safely
+            # Update matching the Arabic Name
             query = text("UPDATE neighborhoods SET avg_walkability = :score WHERE name = :name")
             result = conn.execute(query, {"score": score, "name": name})
+            updated_count += result.rowcount
             
         conn.commit()
+        print(f"Updated {updated_count} rows in total.")
+
+    # --- VERIFICATION ---
+    print("\n--- VERIFICATION ---")
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT name, avg_walkability FROM neighborhoods WHERE avg_walkability IS NOT NULL LIMIT 5"))
+        rows = result.fetchall()
+        print(f"Sample Updated Rows: {len(rows)}")
+        for r in rows:
+            print(r)
+        
+        count = conn.execute(text("SELECT COUNT(*) FROM neighborhoods WHERE avg_walkability > 0")).scalar()
+        print(f"Total neighborhoods with positive score: {count}")
             
     print("✅ Enrichment and Neighborhood Update complete!")
 
