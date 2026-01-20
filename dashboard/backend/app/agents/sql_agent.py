@@ -106,34 +106,31 @@ class SQLAgent:
             
             if is_spatial:
                 sql_lower = sql_query.lower()
-                sql_query_fixed = sql_query
                 
-                # Rule 1: Replace usage of 'geom' (as a column) with 'geometry AS geom'
-                # But ignore if it's being used as an alias (preceded by AS)
-                if 'geom' in sql_lower:
-                    def replace_geom_col(match):
-                        # Check text before the match to see if it's preceded by "AS"
-                        # match.string is the full string being processed
-                        preceding = match.string[:match.start()]
-                        # Look for 'AS' followed by whitespace at the end of preceding text
-                        if re.search(r'AS\s+$', preceding, re.IGNORECASE):
-                            return match.group(0) # It's an alias, leave it alone
-                        return 'geometry AS geom'
+                # Fix common hallucination: 'geom' column does not exist, it is 'geometry'.
+                # But we must preserve 'AS geom' if the LLM correctly aliased it.
+                def replace_hallucinated_geom(match):
+                    # Check text before the match to see if it's preceded by "AS"
+                    # match.string is the full string being processed
+                    preceding = match.string[:match.start()]
+                    # Look for 'AS' followed by whitespace at the end of preceding text
+                    if re.search(r'AS\s+$', preceding, re.IGNORECASE):
+                        return match.group(0) # It's an alias (e.g. "AS geom"), leave it alone
+                    return 'geometry' # Replace bare "geom" with "geometry"
 
-                    sql_query_fixed = re.sub(r'\bgeom\b(?:\s+AS\s+\w+)?', replace_geom_col, sql_query_fixed, flags=re.IGNORECASE)
-                
-                # Rule 2: Ensure 'geometry' is selected as 'geom'
-                # If 'geometry' is present but 'geometry as geom' is NOT, apply fix.
-                if 'geometry' in sql_lower and 'as geom' not in sql_query_fixed.lower():
-                     # If we have 'geometry' but NOT 'as geom', replace 'geometry' with 'geometry AS geom'
-                     sql_query_fixed = re.sub(r'\bgeometry\b(?:\s+AS\s+\w+)?', 'geometry AS geom', sql_query_fixed, flags=re.IGNORECASE)
+                # Replace 'geom' with 'geometry' everywhere EXCEPT when used as an alias
+                sql_query_fixed = re.sub(r'\bgeom\b', replace_hallucinated_geom, sql_query, flags=re.IGNORECASE)
 
                 if sql_query != sql_query_fixed:
                      sql_query = sql_query_fixed
-                     yield f"[[DEBUG: (Auto-corrected to use 'geometry AS geom')\n]]"
+                     yield f"[[DEBUG: (Auto-corrected 'geom' to 'geometry')\n]]"
                 
-                # Always use 'geom' now because we forced it
-                geom_col = 'geom'
+                # Determine the geometry column name expected in the result
+                # Default to 'geometry' (the actual column name)
+                geom_col = 'geometry'
+                # If the query explicitly aliases it as 'geom', tell GeoPandas to look for 'geom'
+                if re.search(r'AS\s+geom\b', sql_query, re.IGNORECASE):
+                    geom_col = 'geom'
                 
                 with self.engine.connect() as conn:
                     gdf = gpd.read_postgis(text(sql_query), conn, geom_col=geom_col)
