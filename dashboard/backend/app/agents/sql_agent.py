@@ -107,20 +107,24 @@ class SQLAgent:
                 sql_lower = sql_query.lower()
                 sql_query_fixed = sql_query
                 
-                # Rule: Force `geom` (with any alias) to be `geometry AS geom`
-                # e.g. `geom AS my_geo` -> `geometry AS geom`
-                # e.g. `geom` -> `geometry AS geom`
-                # e.g. `output.geom` -> `output.geometry AS geom`
+                # Rule 1: Replace usage of 'geom' (as a column) with 'geometry AS geom'
+                # But ignore if it's being used as an alias (preceded by AS)
                 if 'geom' in sql_lower:
-                     # Replace `geom` optionally followed by alias (AS \w+) with `geometry AS geom`
-                     # Capture word boundary before geom to support table aliases (e.g. t.geom) - wait, \b matches after .
-                     sql_query_fixed = re.sub(r'\bgeom\b(?:\s+AS\s+\w+)?', 'geometry AS geom', sql_query, flags=re.IGNORECASE)
+                    def replace_geom_col(match):
+                        # Check text before the match to see if it's preceded by "AS"
+                        # match.string is the full string being processed
+                        preceding = match.string[:match.start()]
+                        # Look for 'AS' followed by whitespace at the end of preceding text
+                        if re.search(r'AS\s+$', preceding, re.IGNORECASE):
+                            return match.group(0) # It's an alias, leave it alone
+                        return 'geometry AS geom'
+
+                    sql_query_fixed = re.sub(r'\bgeom\b(?:\s+AS\s+\w+)?', replace_geom_col, sql_query_fixed, flags=re.IGNORECASE)
                 
-                # If LLM used `geometry` without alias, rename to `geom` for consistency
-                # e.g. `geometry` -> `geometry AS geom`
-                # e.g. `geometry AS foo` -> `geometry AS geom` (Optional?)
-                # Standardizing is safer.
+                # Rule 2: Ensure 'geometry' is selected as 'geom'
+                # If 'geometry' is present but 'geometry as geom' is NOT, apply fix.
                 if 'geometry' in sql_lower and 'as geom' not in sql_query_fixed.lower():
+                     # If we have 'geometry' but NOT 'as geom', replace 'geometry' with 'geometry AS geom'
                      sql_query_fixed = re.sub(r'\bgeometry\b(?:\s+AS\s+\w+)?', 'geometry AS geom', sql_query_fixed, flags=re.IGNORECASE)
 
                 if sql_query != sql_query_fixed:
