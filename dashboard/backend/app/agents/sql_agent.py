@@ -64,7 +64,8 @@ class SQLAgent:
             "2. Table: `neighborhoods` has `geometry` and `avg_walkability`.\n"
             "3. Select `geometry AS geom` for maps.\n"
             "4. Search names with ILIKE and wildcards (e.g. '%Name%').\n"
-            "5. Use these Exact Arabic Names:\n"
+            "5. For ranking (Top/Bottom), use ORDER BY. Do NOT filter by name unless explicitly asked.\n"
+            "6. Use these Exact Arabic Names:\n"
             f"   [{valid_names_str}]\n"
         )
         
