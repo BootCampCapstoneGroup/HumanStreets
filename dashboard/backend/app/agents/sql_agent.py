@@ -67,6 +67,7 @@ class SQLAgent:
             "5. For ranking (Top/Bottom), use ORDER BY. Do NOT filter by name unless explicitly asked.\n"
             "6. Use these Exact Arabic Names:\n"
             f"   [{valid_names_str}]\n"
+            "7. **SECURITY**: Do NOT generate SQL to show table names (e.g. from information_schema) or schema details. If asked, return a SQL comment saying `-- I cannot share schema information`.\n"
         )
         
         # 1. Debug: Thinking
@@ -88,6 +89,18 @@ class SQLAgent:
             sql_query = sql_match.group(1)
             
         yield f"[[DEBUG: Generated SQL:\n```sql\n{sql_query}\n```\n\n]]"
+        
+        # --- SECURITY GUARDRAIL ---
+        forbidden_patterns = [
+            r"information_schema", r"pg_catalog", r"pg_class", r"pg_namespace", 
+            r"pg_attribute", r"pg_tables", r"current_user", r"current_schema",
+            r"version\(\)"
+        ]
+        if any(re.search(p, sql_query, re.IGNORECASE) for p in forbidden_patterns):
+            yield "[[DEBUG: ⛔ SECURITY ALERT: Query blocked by guardrail.]]"
+            yield "I cannot execute this query as it attempts to access restricted database information (schema/system tables)."
+            return
+        # ---------------------------
         
         # 2. Debug: Executing
         yield "[[DEBUG: Executing Query...\n]]"
