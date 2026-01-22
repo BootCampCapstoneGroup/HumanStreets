@@ -55,19 +55,38 @@ class SQLAgent:
         valid_names = self._get_neighborhood_names()
         valid_names_str = ", ".join(valid_names)
         
+        # Common English-to-Arabic neighborhood name mappings
+        name_mappings = (
+            "Al-Narjis = النرجس, Al-Malqa = الملقا, Al-Nathim = النظيم, "
+            "Al-Yasmin = الياسمين, Al-Rawdah = الروضة, Al-Sahafa = الصحافة, "
+            "Al-Nakheel = النخيل, Al-Rabwa = الربوة, Al-Suwaidi = السويدي, "
+            "Al-Malaz = الملز, Al-Naseem = النسيم, Al-Olaya = العليا"
+        )
+        
         system_prompt = (
             "You are a PostGIS SQL Expert. Convert user questions into SQL.\n"
             "**Database Schema:**\n"
             f"{schema}\n"
-            "**Rules:**\n"
+            "**CRITICAL Rules:**\n"
             "1. Output ONLY the SQL query inside ```sql ... ```.\n"
             "2. Table: `neighborhoods` has `geometry` and `avg_walkability`.\n"
-            "3. Select `geometry AS geom` for maps.\n"
-            "4. Search names with ILIKE and wildcards (e.g. '%Name%').\n"
-            "5. For ranking (Top/Bottom), use ORDER BY. Do NOT filter by name unless explicitly asked.\n"
-            "6. Use these Exact Arabic Names:\n"
-            f"   [{valid_names_str}]\n"
-            "7. **SECURITY**: Do NOT generate SQL to show table names (e.g. from information_schema) or schema details. If asked, return a SQL comment saying `-- I cannot share schema information`.\n"
+            "3. For spatial/map queries: `SELECT geometry AS geom, avg_walkability, name FROM neighborhoods ...`\n"
+            "4. **NAME MATCHING**: ALWAYS use `ILIKE '%ArabicName%'` for neighborhood searches. NEVER use exact `= 'name'` matching!\n"
+            "5. For ranking (Top/Bottom N), use `ORDER BY avg_walkability DESC/ASC LIMIT N` with geometry.\n"
+            "6. **SECURITY**: Do NOT generate SQL to show table names or schema details.\n\n"
+            "**Name Transliteration (English → Arabic):**\n"
+            f"   {name_mappings}\n\n"
+            "**Valid Arabic Names in Database:**\n"
+            f"   [{valid_names_str}]\n\n"
+            "**Example Queries:**\n"
+            "Q: Show Al-Narjis\n"
+            "A: ```sql\nSELECT geometry AS geom, avg_walkability, name FROM neighborhoods WHERE name ILIKE '%النرجس%';\n```\n\n"
+            "Q: Show حي الملقا\n"
+            "A: ```sql\nSELECT geometry AS geom, avg_walkability, name FROM neighborhoods WHERE name ILIKE '%الملقا%';\n```\n\n"
+            "Q: Show top 5 walkable neighborhoods\n"
+            "A: ```sql\nSELECT geometry AS geom, avg_walkability, name FROM neighborhoods ORDER BY avg_walkability DESC LIMIT 5;\n```\n\n"
+            "Q: Show Al-Narjis and Al-Malqa\n"
+            "A: ```sql\nSELECT geometry AS geom, avg_walkability, name FROM neighborhoods WHERE name ILIKE '%النرجس%' OR name ILIKE '%الملقا%';\n```\n"
         )
         
         # 1. Debug: Thinking
